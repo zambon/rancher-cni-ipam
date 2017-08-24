@@ -1,8 +1,20 @@
-FROM golang:1.6.2
-RUN go get github.com/rancher/trash
-RUN go get github.com/golang/lint/golint
-RUN curl -sL https://get.docker.com/builds/Linux/x86_64/docker-1.9.1 > /usr/bin/docker && \
+FROM zambon/golang-multi:1.7.6
+
+ARG DAPPER_HOST_ARCH
+ENV HOST_ARCH=${DAPPER_HOST_ARCH} ARCH=${DAPPER_HOST_ARCH}
+
+RUN rm -f /bin/sh && ln -s /bin/bash /bin/sh && \
+    go get github.com/rancher/trash && \
+    go get github.com/golang/lint/golint
+
+ENV DOCKER_URL_amd64=https://github.com/rancher/docker/releases/download/v1.10.3-ros1/docker-1.10.3_amd64 \
+    DOCKER_URL_arm=https://github.com/rancher/docker/releases/download/v1.10.3-ros1/docker-1.10.3_arm \
+    DOCKER_URL_ppc64le=https://github.com/zambon/moby/releases/download/v1.10.3/docker-1.10.3_ppc64le \
+    DOCKER_URL=DOCKER_URL_${ARCH}
+
+RUN curl -fsSL ${!DOCKER_URL} > /usr/bin/docker && \
     chmod +x /usr/bin/docker
+
 ENV PATH /go/bin:$PATH
 ENV DAPPER_SOURCE /go/src/github.com/rancher/rancher-cni-ipam
 ENV DAPPER_OUTPUT bin dist
@@ -10,6 +22,8 @@ ENV DAPPER_DOCKER_SOCKET true
 ENV DAPPER_ENV TAG REPO VERSION
 ENV GO15VENDOREXPERIMENT 1
 ENV TRASH_CACHE ${DAPPER_SOURCE}/.trash-cache
+
 WORKDIR ${DAPPER_SOURCE}
+
 ENTRYPOINT ["./scripts/entry"]
 CMD ["ci"]
